@@ -17,8 +17,15 @@ plot(lm2)
 par(mfrow=c(1,1))
 
 #변수변환
-lm3<-lm(data = train_2, sqrt(등록차량수)~log(평균면적)+sqrt(실세대수)+지역+
-          sqrt(주차면수)+지역)
+lm3<-lm(data = train_2, sqrt(등록차량수)~log(평균면적)+실세대수+지역+주차면수) #answer2
 summary(lm3)
 sum(abs(lm3$residuals))/402
 mean(abs(lm3$fitted.values^2-train_2$등록차량수)) # 109.2535
+
+#건물구분&공급유형 추가
+lm4<-lm(data=train_3, sqrt(등록차량수)~.-평균면적+log(평균면적)) #answer5
+summary(lm4)
+sum(abs(lm4$residuals))/402
+mean(abs(lm4$fitted.values^2-train_2$등록차량수)) # 107.1901
+plot(lm4)
+par(mfrow=c(1,1))

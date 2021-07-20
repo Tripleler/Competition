@@ -34,6 +34,8 @@ train_1<-subset(train_1, train_1$지역!='서울특별시')
 
 #면적세대 계산 & 시각화
 train_1$단지코드<-factor(train_1$단지코드)
+train_1$건물구분<-as.factor(train_1$건물구분)
+train_1$공급유형<-as.factor(train_1$공급유형)
 train_1['면적세대']<-train_1['전용면적']*train_1['세대수']/train_1['총세대수']
 boxplot(tapply(train_1$면적세대, train_1$단지코드, sum))
 b<-tapply(train_1$면적세대, train_1$단지코드, sum)
@@ -78,6 +80,18 @@ summary(train_2)
 
 #==============================================================================
 
+#건물구분&공급유형
+train2<-train1[c(1,3,5,7)]
+library(reshape2)
+train3<-dcast(data=train2, 단지코드~건물구분+공급유형, sum)
+train_2<-merge(train_2, train3, by='단지코드')
+train_3<-train_2[c(5,6,7,8,9,10,11,13,14,15,16,17,18,19,20)]
+train_3<-train_3[-10]
+train_3<-train_3[-9]
+
+
+#==============================================================================
+
 #test셋 변환
 colnames(test)[13]<-'버스'
 colnames(test)[12]<-'지하철'
@@ -110,6 +124,14 @@ test_2$지역<-as.factor(test_2$지역)
 summary(test_2)
 test_2[is.na(test_2)]<-0
 
+#건물구분&공급유형
+colnames(test)[1]<-'code'
+test_2<-test_2[-11]
+test2<-test[c(1,3,5,7)]
+test3<-dcast(data=test2, code~건물구분+공급유형, sum)
+test_2<-merge(test_2, test3, by='code')
+test_3<-test_2[c(5,6,7,8,9,10,11,13,14,15,16,17)]
+
 #==============================================================================
 
 #임대보증금&임대료
@@ -133,20 +155,30 @@ out<-subset(train1, train1$임대료/train1$임대보증금<=0.002)
 plot(out$임대보증금, out$임대료)
 
 df<-subset(train1, train1$건물구분=='아파트')
-df<-subset(train1, train1$공급유형=='국민임대') #66 37 33
-df<-subset(train1, train1$자격유형 %in% c(  'K'))
-plot(df$등록차량수, df$주차면수)
+df<-subset(train1, train1$공급유형=='행복주택') #66 37 33
+df<-subset(train1, train1$자격유형 %in% c( 'D'))
+plot(df$임대보증금, df$임대료)
+lmcor<-lm(df$임대료~df$임대보증금)
+abline(lmcor)
+summary(lmcor)
+par(mfrow=c(1,1))
+plot(lmcor)
 abline(a=0, b=1)
 boxplot(df$등록차량수)
 levels(train1$공급유형)
 
 cor(train_1$임대보증금, train_1$전용면적, use='complete.obs')
 plot(train_1$임대보증금, train_1$전용면적, ylim=c(0,150))
-#==============================================================================
+
 
 #==============================================================================
+age$지역<-as.factor(age$지역)
+boxplot(train_1$임대보증금, na.rm=T)
+plot(age[c(2,3)], age$지역)
+x=seq(-10,10,0.01)
+y=x*log(x)-x
+plot(x,y)
+#==============================================================================
 
-colnames(test_2)[1]<-'code'
-test_2['num']<-predict.lm(lm3, newdata = test_2)^2
-answer<-merge(submission, test_2[c(1,11)], by='code')
-write.csv(answer, 'answer4.csv', row.names = F, quote=F)
+answer['num']<-predict.lm(lm4, newdata = test_3)^2
+write.csv(answer, 'answer6.csv', row.names = F, quote=F)
