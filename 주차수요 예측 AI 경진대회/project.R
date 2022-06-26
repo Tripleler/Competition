@@ -1,6 +1,6 @@
 library(dplyr)
 # 파일로드
-train<-read.csv('train.csv', fileEncoding = 'UTF-8')
+train<-read.csv('data/train.csv', fileEncoding = 'UTF-8')
 
 # 전처리
 #===============================================================================
@@ -21,9 +21,8 @@ rownames(train1)<-c(1:nrow(train1))
 # 단지별로 그룹화
 train1$단지코드<-as.factor(train1$단지코드)
 # 연속형변수만 추출
-train1<-train1[,c(1,2,6,8,10,11,14,15)]
+train1<-train1[,c(1,2,6,8,10,11,12,13,14,15)]
 #train_2 단지별로 묶은 데이터셋
-train
 train2<-data.frame(levels(train1$단지코드),
                     tapply(train1$총세대수, train1$단지코드, mean),
                     tapply(train1$공가수, train1$단지코드, mean),

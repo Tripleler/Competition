@@ -1,11 +1,11 @@
 library(dplyr)
 
 #파일로드
-train<-read.csv('train.csv', fileEncoding = 'UTF-8')
-test<-read.csv('test.csv', fileEncoding = 'UTF-8')
-submission<-read.csv('sample_submission.csv', fileEncoding = 'UTF-8')
+train<-read.csv('data/train.csv', fileEncoding = 'UTF-8')
+test<-read.csv('data/test.csv', fileEncoding = 'UTF-8')
+submission<-read.csv('result/sample_submission.csv', fileEncoding = 'UTF-8')
 submission<-submission[1]
-age<-read.csv('age_gender_info.csv', fileEncoding = 'UTF-8')
+age<-read.csv('data/age_gender_info.csv', fileEncoding = 'UTF-8')
 
 #==============================================================================
 
@@ -18,76 +18,80 @@ colnames(train)[3]<-'건물구분'
 
 #==============================================================================
 
-#train_1 공지된 이상치만 제거한 데이터 2952>2818
-train_1<-train
+#train1 공지된 이상치만 제거한 데이터 2952>2818
+train1<-train
 rownames(train)<-c(1:2952)
-train_1<-subset(
-  train_1, !train_1$단지코드 %in%
+train1<-subset(
+  train1, !train1$단지코드 %in%
     c('C1490','C2497','C2620','C1344','C1024','C2470','C1206','C1740','C2405',
       'C1804','C2085','C1397','C2431','C1649','C1036','C1095','C2051','C1218',
       'C1894','C2483','C1502','C1988'))
 
 #test셋에 없는 서울 지역 제거
-train_1<-subset(train_1, train_1$지역!='서울특별시')
+train1<-subset(train1, train1$지역!='서울특별시')
 
 #==============================================================================
 
-#면적세대 계산 & 시각화
-train_1$단지코드<-factor(train_1$단지코드)
-train_1$건물구분<-as.factor(train_1$건물구분)
-train_1$공급유형<-as.factor(train_1$공급유형)
-train_1['면적세대']<-train_1['전용면적']*train_1['세대수']/train_1['총세대수']
-boxplot(tapply(train_1$면적세대, train_1$단지코드, sum))
-b<-tapply(train_1$면적세대, train_1$단지코드, sum)
-단지코드<-rownames(b)
-b<-data.frame(단지코드,b)
-rownames(b)<-c(1:nrow(b))
+#단지별 평균면적 계산 & 시각화
+train1$단지코드<-factor(train1$단지코드)
+train1$건물구분<-as.factor(train1$건물구분)
+train1$공급유형<-as.factor(train1$공급유형)
+train1['면적세대']<-train1['전용면적']*train1['세대수']/train1['총세대수']
+평균면적<-tapply(train1$면적세대, train1$단지코드, sum)
+단지코드<-rownames(평균면적)
+areamean<-data.frame(단지코드,평균면적)
+rownames(areamean)<-c(1:nrow(areamean))
+boxplot(areamean$평균면적)
 
 #==============================================================================
 
-#train_2 단지별로 묶은 데이터셋
-train_2<-data.frame(levels(train_1$단지코드),
-                tapply(train_1$총세대수, train_1$단지코드, mean),
-                tapply(train_1$세대수, train_1$단지코드, sum),
-                tapply(train_1$공가수, train_1$단지코드, mean),
-                tapply(train_1$주차면수, train_1$단지코드, mean),
-                tapply(train_1$등록차량수, train_1$단지코드, mean),
-                tapply(train_1$면적세대, train_1$단지코드, sum),
-                tapply(train_1$버스, train_1$단지코드, mean),
-                tapply(train_1$지하철, train_1$단지코드, mean))
-colnames(train_2)<-c('단지코드', '총세대수', '세대수합', '공가수', '주차면수',
+#train2 단지별로 묶은 데이터셋
+train2<-data.frame(levels(train1$단지코드),
+                   tapply(train1$총세대수, train1$단지코드, mean),
+                   tapply(train1$세대수, train1$단지코드, sum),
+                   tapply(train1$공가수, train1$단지코드, mean),
+                   tapply(train1$주차면수, train1$단지코드, mean),
+                   tapply(train1$등록차량수, train1$단지코드, mean),
+                   tapply(train1$면적세대, train1$단지코드, sum),
+                   tapply(train1$버스, train1$단지코드, mean),
+                   tapply(train1$지하철, train1$단지코드, mean))
+colnames(train2)<-c('단지코드', '총세대수', '세대수합', '공가수', '주차면수',
                     '등록차량수', '평균면적', '버스', '지하철')
-rownames(train_2)<-c(1:nrow(train_2))
+rownames(train2)<-c(1:nrow(train2))
 
 #실세대수 계산. (실세대수=총세대수-공가수)
-train_2['실세대수']<-train_2$총세대수-train_2$공가수
+train2['실세대수']<-train2$총세대수-train2$공가수
 
 #결측치 0으로 치환
-train_2[is.na(train_2)]<-0
+train2[is.na(train2)]<-0
 
 #지하철&버스 라벨인코딩
-train_2['지하철2']<-ifelse(train_2$지하철==0,0,1)
+train2['지하철여부']<-ifelse(train2$지하철==0,0,1)
 #==============================================================================
 
 #지역변수 추가
-location=data.frame(train_1$단지코드, train_1$지역)
-location<-location[-which(duplicated(location$train_1.단지코드)),]
+location<-data.frame(train1$단지코드, train1$지역)
+location<-location[-which(duplicated(location$train1.단지코드)),]
 colnames(location)<-c('단지코드', '지역')
-train_2<-merge(train_2, location, by = '단지코드')
-train_2$단지코드<-as.factor(train_2$단지코드)
-train_2$지역<-as.factor(train_2$지역)
-summary(train_2)
+train2<-merge(train2, location, by = '단지코드')
+train2$단지코드<-as.factor(train2$단지코드)
+train2$지역<-as.factor(train2$지역)
+summary(train2)
 
 #==============================================================================
 
 #건물구분&공급유형
-train2<-train1[c(1,3,5,7)]
+house<-train1[c(1,3,5,7)]
 library(reshape2)
-train3<-dcast(data=train2, 단지코드~건물구분+공급유형, sum)
-train_2<-merge(train_2, train3, by='단지코드')
-train_3<-train_2[c(5,6,7,8,9,10,11,13,14,15,16,17,18,19,20)]
-train_3<-train_3[-10]
-train_3<-train_3[-9]
+house<-dcast(data=house,
+             formula=단지코드~건물구분+공급유형,
+             fun.aggregate=sum,
+             value.var='세대수')
+train2<-merge(train2, house, by='단지코드')
+# 단지코드, 총세대수, 세대수합, 공가수, 지역 제외
+train3<-train2[c(5,6,7,8,9,10,11,13,14,15,16,17,18,19,20)]
+# train3<-train3[-10]
+# train3<-train3[-9]
 
 
 #==============================================================================
